@@ -4,26 +4,22 @@
 # Log files
 *.log
 
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+# Package files
 *.jar
 *.war
 *.ear
 
-# Virtual machine crash logs
-hs_err_pid*
-
-# IntelliJ & Eclipse
+# IDE folders
 .idea/
 *.iml
+.vscode/
 out/
 target/
 bin/
 .settings/
 .classpath
 .project
+
+# OS files
+.DS_Store
+Thumbs.db
