@@ -1,19 +1,60 @@
 # Task Management Application
 
-A simple task management application implemented in Java using queues and stacks.
-This project was developed for the CS341 lab. The code is intentionally open for improvement. If you have better ideas, cleaner code, or new features, please edit, fork, or submit a pull request.
+This project is a Java-based task management system built using queues and stacks.  
+It includes both a console interface and a graphical interface (Swing).  
+The goal of publishing this project is to allow others to read, improve, refactor, or expand the code.  
+Contributions and better ideas are welcome.
+
+---
 
 ## Overview
 
-The application implements a basic to-do system with three categories: `work`, `personal`, and `shopping`. Each category has one queue for pending tasks and one stack for finished tasks. The application supports both a console interface and a Swing GUI.
+The application manages three categories of tasks:
+- work  
+- personal  
+- shopping  
 
-Key behaviours implemented in code
-- Add task: new tasks are appended to the selected category queue.
-- Complete task: oldest pending task in a category is moved to that category stack.
-- Reorder task: remove a task by index and insert it at a new index in the queue.
-- Undo: revert the last COMPLETE or REORDER action.
-- Statistics: total pending and finished counts per category.
-- Recursive view: a recursive routine prints pending tasks in order.
+Each category maintains:
+- a queue for pending tasks  
+- a stack for completed tasks  
 
-## Project files
+The program supports adding tasks, completing tasks, reordering tasks, undoing actions, viewing statistics, and printing tasks recursively.
+
+Both interfaces (console and GUI) rely on the same core logic implemented in `TaskManager`.
+
+---
+
+## Features
+
+### Add Tasks  
+New tasks are appended to the pending queue of the selected category.
+
+### Complete Tasks  
+The oldest pending task in a category is removed from the queue and pushed to the finished stack.
+
+### Reorder Tasks  
+A task can be moved from one position to another within its pending queue.
+
+### Undo  
+The last action (complete or reorder) can be reverted.
+
+### Statistics  
+The program prints total pending tasks, finished tasks, and per-category counts.
+
+### Recursive Listing  
+Pending tasks of a category can be displayed using a recursive method.
+
+### GUI  
+A Swing-based interface is included for easier interaction.
+
+---
+
+## Project Files
+
+src/
+taskmgr/
+Main.java
+Task.java
+TaskManager.java
+TaskManagerGUI.java
 
