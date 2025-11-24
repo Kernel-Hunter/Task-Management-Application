@@ -5,13 +5,18 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class TaskManagerGUI {
     private TaskManager tm;
     private JFrame frame;
     private JComboBox<String> categoryCombo;
+    private JComboBox<Task.Priority> priorityCombo;
     private JTextArea outputArea;
     private JTextField titleField;
+    private JTextField deadlineField;
     private JSpinner oldIndexSpinner;
     private JSpinner newIndexSpinner;
 
@@ -21,7 +26,6 @@ public class TaskManagerGUI {
     }
 
     private void initialize() {
-
         frame = new JFrame("Task Management Application");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout(10, 10));
@@ -39,7 +43,7 @@ public class TaskManagerGUI {
         JPanel controlPanel = createControlPanel();
         mainPanel.add(controlPanel, BorderLayout.WEST);
 
-        outputArea = new JTextArea(20, 40);
+        outputArea = new JTextArea(20, 50);
         outputArea.setEditable(false);
         outputArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         outputArea.setBorder(BorderFactory.createTitledBorder("Output"));
@@ -48,8 +52,12 @@ public class TaskManagerGUI {
 
         frame.add(mainPanel, BorderLayout.CENTER);
         frame.pack();
-        frame.setLocationRelativeTo(null); 
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+        
+        appendOutput("🚀 Task Manager Started!");
+        appendOutput("💡 Features: Priority Queues, Deadlines, Undo, Categories");
+        appendOutput("");
     }
 
     private JPanel createControlPanel() {
@@ -76,6 +84,19 @@ public class TaskManagerGUI {
         titlePanel.add(titleField);
         addTaskPanel.add(titlePanel);
 
+        JPanel deadlinePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        deadlinePanel.add(new JLabel("Deadline (YYYY-MM-DD):"));
+        deadlineField = new JTextField(10);
+        deadlineField.setToolTipText("Optional: Format YYYY-MM-DD");
+        deadlinePanel.add(deadlineField);
+        addTaskPanel.add(deadlinePanel);
+
+        JPanel priorityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        priorityPanel.add(new JLabel("Priority:"));
+        priorityCombo = new JComboBox<>(Task.Priority.values());
+        priorityPanel.add(priorityCombo);
+        addTaskPanel.add(priorityPanel);
+
         JButton addButton = new JButton("Add Task");
         addButton.addActionListener(new AddTaskListener());
         addTaskPanel.add(addButton);
@@ -83,14 +104,39 @@ public class TaskManagerGUI {
         panel.add(addTaskPanel);
         panel.add(Box.createVerticalStrut(10));
 
+        JPanel quickPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        quickPanel.setBorder(BorderFactory.createTitledBorder("Quick Actions"));
+        
         JButton completeButton = new JButton("Complete Task");
         completeButton.addActionListener(new CompleteTaskListener());
-        panel.add(completeButton);
+        quickPanel.add(completeButton);
+
+        JButton nextTaskButton = new JButton("Show Next Task");
+        nextTaskButton.addActionListener(e -> showNextTask());
+        quickPanel.add(nextTaskButton);
+
+        JButton overdueButton = new JButton("Show Overdue");
+        overdueButton.addActionListener(e -> showOverdueTasks());
+        quickPanel.add(overdueButton);
+
+        JButton dueTodayButton = new JButton("Due Today");
+        dueTodayButton.addActionListener(e -> showDueToday());
+        quickPanel.add(dueTodayButton);
+
+        JButton reorderButton = new JButton("Reorder Tasks");
+        reorderButton.addActionListener(new ReorderListener());
+        quickPanel.add(reorderButton);
+
+        JButton listByPriorityButton = new JButton("List by Priority");
+        listByPriorityButton.addActionListener(e -> listByPriority());
+        quickPanel.add(listByPriorityButton);
+
+        panel.add(quickPanel);
         panel.add(Box.createVerticalStrut(10));
 
         JPanel reorderPanel = new JPanel();
         reorderPanel.setLayout(new BoxLayout(reorderPanel, BoxLayout.Y_AXIS));
-        reorderPanel.setBorder(BorderFactory.createTitledBorder("Reorder Tasks"));
+        reorderPanel.setBorder(BorderFactory.createTitledBorder("Manual Reorder"));
 
         JPanel indexPanel1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
         indexPanel1.add(new JLabel("Old Index:"));
@@ -104,31 +150,33 @@ public class TaskManagerGUI {
         indexPanel2.add(newIndexSpinner);
         reorderPanel.add(indexPanel2);
 
-        JButton reorderButton = new JButton("Reorder");
-        reorderButton.addActionListener(new ReorderListener());
-        reorderPanel.add(reorderButton);
-
         panel.add(reorderPanel);
         panel.add(Box.createVerticalStrut(10));
 
+        JPanel advancedPanel = new JPanel();
+        advancedPanel.setLayout(new BoxLayout(advancedPanel, BoxLayout.Y_AXIS));
+        advancedPanel.setBorder(BorderFactory.createTitledBorder("Advanced"));
+
         JButton statsButton = new JButton("Show Statistics");
         statsButton.addActionListener(new StatsListener());
-        panel.add(statsButton);
-        panel.add(Box.createVerticalStrut(5));
+        advancedPanel.add(statsButton);
+        advancedPanel.add(Box.createVerticalStrut(5));
 
         JButton undoButton = new JButton("Undo Last Action");
         undoButton.addActionListener(new UndoListener());
-        panel.add(undoButton);
-        panel.add(Box.createVerticalStrut(5));
+        advancedPanel.add(undoButton);
+        advancedPanel.add(Box.createVerticalStrut(5));
 
-        JButton listButton = new JButton("List Tasks");
+        JButton listButton = new JButton("List All Tasks");
         listButton.addActionListener(new ListListener());
-        panel.add(listButton);
-        panel.add(Box.createVerticalStrut(5));
+        advancedPanel.add(listButton);
+        advancedPanel.add(Box.createVerticalStrut(5));
 
         JButton clearButton = new JButton("Clear Output");
         clearButton.addActionListener(e -> outputArea.setText(""));
-        panel.add(clearButton);
+        advancedPanel.add(clearButton);
+
+        panel.add(advancedPanel);
 
         return panel;
     }
@@ -138,11 +186,63 @@ public class TaskManagerGUI {
         outputArea.setCaretPosition(outputArea.getDocument().getLength());
     }
 
+    private void showNextTask() {
+        String category = (String) categoryCombo.getSelectedItem();
+        Task next = tm.getNextTask(category);
+        if (next != null) {
+            appendOutput("⭐ Next task in " + category + ": " + next);
+        } else {
+            appendOutput("✅ No pending tasks in " + category);
+        }
+    }
+
+    private void showOverdueTasks() {
+        java.util.List<Task> overdue = tm.getOverdueTasks();
+        appendOutput("🔴 OVERDUE TASKS (" + overdue.size() + "):");
+        if (overdue.isEmpty()) {
+            appendOutput("  No overdue tasks! 🎉");
+        } else {
+            for (int i = 0; i < overdue.size(); i++) {
+                appendOutput("  " + (i + 1) + ". " + overdue.get(i));
+            }
+        }
+    }
+
+    private void showDueToday() {
+        java.util.List<Task> dueToday = tm.getTasksDueToday();
+        appendOutput("📅 TASKS DUE TODAY (" + dueToday.size() + "):");
+        if (dueToday.isEmpty()) {
+            appendOutput("  No tasks due today! 🎉");
+        } else {
+            for (int i = 0; i < dueToday.size(); i++) {
+                appendOutput("  " + (i + 1) + ". " + dueToday.get(i));
+            }
+        }
+    }
+
+    private void listByPriority() {
+        String category = (String) categoryCombo.getSelectedItem();
+        appendOutput("📊 TASKS BY PRIORITY - " + category.toUpperCase());
+        
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream ps = new java.io.PrintStream(baos);
+        java.io.PrintStream old = System.out;
+        System.setOut(ps);
+        
+        tm.printPendingByPriority(category);
+        
+        System.out.flush();
+        System.setOut(old);
+        appendOutput(baos.toString());
+    }
+
     private class AddTaskListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             String title = titleField.getText().trim();
             String category = (String) categoryCombo.getSelectedItem();
+            String deadlineStr = deadlineField.getText().trim();
+            Task.Priority priority = (Task.Priority) priorityCombo.getSelectedItem();
             
             if (title.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Please enter a task title", 
@@ -150,9 +250,36 @@ public class TaskManagerGUI {
                 return;
             }
             
-            tm.addTask(title, category);
-            appendOutput("✓ Added task: [" + category + "] " + title);
+            LocalDate deadline = null;
+            if (!deadlineStr.isEmpty()) {
+                try {
+                    deadline = LocalDate.parse(deadlineStr);
+                    if (deadline.isBefore(LocalDate.now())) {
+                        int result = JOptionPane.showConfirmDialog(frame, 
+                            "This deadline is in the past. Continue anyway?", 
+                            "Past Deadline", JOptionPane.YES_NO_OPTION);
+                        if (result != JOptionPane.YES_OPTION) {
+                            return;
+                        }
+                    }
+                } catch (DateTimeParseException ex) {
+                    JOptionPane.showMessageDialog(frame, 
+                        "Invalid date format. Use YYYY-MM-DD", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+            
+            tm.addTask(title, category, deadline, priority);
+            String message = "✓ Added: " + title;
+            if (deadline != null) {
+                message += " (Due: " + deadline.format(DateTimeFormatter.ofPattern("MMM dd")) + ")";
+            }
+            message += " [" + priority + "]";
+            appendOutput(message);
+            
             titleField.setText("");
+            deadlineField.setText("");
         }
     }
 
@@ -160,10 +287,19 @@ public class TaskManagerGUI {
         @Override
         public void actionPerformed(ActionEvent e) {
             String category = (String) categoryCombo.getSelectedItem();
-            boolean success = tm.completeTask(category);
+            Task nextTask = tm.getNextTask(category);
             
-            if (success) {
-                appendOutput("✓ Completed a task from " + category + " category");
+            if (nextTask != null) {
+                int confirm = JOptionPane.showConfirmDialog(frame,
+                    "Complete this task?\n" + nextTask,
+                    "Confirm Completion", JOptionPane.YES_NO_OPTION);
+                
+                if (confirm == JOptionPane.YES_OPTION) {
+                    boolean success = tm.completeTask(category);
+                    if (success) {
+                        appendOutput("✅ Completed: " + nextTask.getTitle());
+                    }
+                }
             } else {
                 appendOutput("✗ No pending tasks in " + category + " category");
             }
@@ -177,13 +313,18 @@ public class TaskManagerGUI {
             int oldIndex = (Integer) oldIndexSpinner.getValue();
             int newIndex = (Integer) newIndexSpinner.getValue();
             
+            int taskCount = tm.getPendingCount(category);
+            ((SpinnerNumberModel) oldIndexSpinner.getModel()).setMaximum(Math.max(0, taskCount - 1));
+            ((SpinnerNumberModel) newIndexSpinner.getModel()).setMaximum(Math.max(0, taskCount));
+            
             boolean success = tm.reorder(category, oldIndex, newIndex);
             
             if (success) {
-                appendOutput("✓ Reordered task in " + category + " category: " + 
+                appendOutput("↷ Reordered task in " + category + " category: " + 
                            oldIndex + " → " + newIndex);
+                listByPriority();
             } else {
-                appendOutput("✗ Invalid indices for reordering");
+                appendOutput("✗ Invalid indices for reordering. Max index: " + (taskCount - 1));
             }
         }
     }
@@ -210,9 +351,8 @@ public class TaskManagerGUI {
         @Override
         public void actionPerformed(ActionEvent e) {
             boolean success = tm.undo();
-            
             if (success) {
-                appendOutput("✓ Undone last action");
+                appendOutput("↶ Undone last action");
             } else {
                 appendOutput("✗ Nothing to undo");
             }
@@ -268,7 +408,6 @@ public class TaskManagerGUI {
     }
 
     public static void main(String[] args) {
-        
         SwingUtilities.invokeLater(() -> new TaskManagerGUI());
     }
 }
